@@ -94,6 +94,7 @@ import QuartzCore
                 #if !os(tvOS) && !os(watchOS)
                     installContextMenuInteraction()
                     installTextPointerInteraction()
+                    installLongPressGestureRecognizer()
                 #endif
 
                 #if !os(tvOS)

@@ -206,6 +206,22 @@
                     addInteraction(pointerInteraction)
                 }
             }
+
+            func installLongPressGestureRecognizer() {
+                let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+                recognizer.minimumPressDuration = 0.4
+                addGestureRecognizer(recognizer)
+            }
+
+            @objc func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+                guard isSelectable, recognizer.state == .began else { return }
+                let location = recognizer.location(in: self)
+                guard let index = textIndexAtPoint(location) else { return }
+                selectWordAtIndex(index)
+                _ = becomeFirstResponder()
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                DispatchQueue.main.async { self.showSelectionMenuController() }
+            }
         #endif
     }
 
