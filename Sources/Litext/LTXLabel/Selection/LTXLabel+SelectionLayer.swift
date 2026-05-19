@@ -51,34 +51,38 @@ import QuartzCore
             #endif
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                selectionHandleStart.isHidden = false
-                selectionHandleEnd.isHidden = false
+                // Don't show handles on macOS (iPad app on Apple Silicon) — they can't be
+                // dragged with mouse/trackpad and would only clutter the selection display.
+                if !ProcessInfo.processInfo.isiOSAppOnMac {
+                    selectionHandleStart.isHidden = false
+                    selectionHandleEnd.isHidden = false
 
-                // Update handle colors to match selection color
-                let handleColor = selectionBackgroundColor?.withAlphaComponent(1.0)
-                selectionHandleStart.updateHandleColor(handleColor)
-                selectionHandleEnd.updateHandleColor(handleColor)
+                    // Update handle colors to match selection color
+                    let handleColor = selectionBackgroundColor?.withAlphaComponent(1.0)
+                    selectionHandleStart.updateHandleColor(handleColor)
+                    selectionHandleEnd.updateHandleColor(handleColor)
 
-                var beginRect = textLayout.rects(
-                    for: NSRange(location: range.location, length: 1)
-                ).first ?? .zero
-                beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
-                selectionHandleStart.frame = .init(
-                    x: beginRect.minX - LTXSelectionHandle.knobRadius - 1,
-                    y: beginRect.minY - LTXSelectionHandle.knobRadius,
-                    width: LTXSelectionHandle.knobRadius * 2,
-                    height: beginRect.height + LTXSelectionHandle.knobRadius
-                )
-                var endRect = textLayout.rects(
-                    for: NSRange(location: range.location + range.length - 1, length: 1)
-                ).first ?? .zero
-                endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
-                selectionHandleEnd.frame = .init(
-                    x: endRect.maxX - LTXSelectionHandle.knobRadius + 1,
-                    y: endRect.minY,
-                    width: LTXSelectionHandle.knobRadius * 2,
-                    height: endRect.height + LTXSelectionHandle.knobRadius
-                )
+                    var beginRect = textLayout.rects(
+                        for: NSRange(location: range.location, length: 1)
+                    ).first ?? .zero
+                    beginRect = convertRectFromTextLayout(beginRect, insetForInteraction: false)
+                    selectionHandleStart.frame = .init(
+                        x: beginRect.minX - LTXSelectionHandle.knobRadius - 1,
+                        y: beginRect.minY - LTXSelectionHandle.knobRadius,
+                        width: LTXSelectionHandle.knobRadius * 2,
+                        height: beginRect.height + LTXSelectionHandle.knobRadius
+                    )
+                    var endRect = textLayout.rects(
+                        for: NSRange(location: range.location + range.length - 1, length: 1)
+                    ).first ?? .zero
+                    endRect = convertRectFromTextLayout(endRect, insetForInteraction: false)
+                    selectionHandleEnd.frame = .init(
+                        x: endRect.maxX - LTXSelectionHandle.knobRadius + 1,
+                        y: endRect.minY,
+                        width: LTXSelectionHandle.knobRadius * 2,
+                        height: endRect.height + LTXSelectionHandle.knobRadius
+                    )
+                }
             #endif
 
             NotificationCenter.default.post(name: kDeduplicateSelectionNotification, object: self)

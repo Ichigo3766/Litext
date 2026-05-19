@@ -103,13 +103,21 @@ import QuartzCore
                 #endif
 
                 #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                    clipsToBounds = false // for selection handle
-                    selectionHandleStart.isHidden = true
-                    selectionHandleStart.delegate = self
-                    addSubview(selectionHandleStart)
-                    selectionHandleEnd.isHidden = true
-                    selectionHandleEnd.delegate = self
-                    addSubview(selectionHandleEnd)
+                    // On macOS (iPad app running on Apple Silicon via "Designed for iPad"),
+                    // the touch-lever handles cannot be dragged with mouse/trackpad — the
+                    // UIPanGestureRecognizer on each handle intercepts and cancels mouse
+                    // drag events before touchesMoved gets them, making selection impossible.
+                    // Skip adding the handles entirely on macOS; the existing pointer-device
+                    // path in touchesMoved handles click-drag selection correctly without them.
+                    if !ProcessInfo.processInfo.isiOSAppOnMac {
+                        clipsToBounds = false // for selection handle
+                        selectionHandleStart.isHidden = true
+                        selectionHandleStart.delegate = self
+                        addSubview(selectionHandleStart)
+                        selectionHandleEnd.isHidden = true
+                        selectionHandleEnd.delegate = self
+                        addSubview(selectionHandleEnd)
+                    }
                 #endif
             }
 

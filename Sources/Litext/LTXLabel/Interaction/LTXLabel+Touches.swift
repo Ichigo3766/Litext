@@ -208,6 +208,10 @@
             }
 
             func installLongPressGestureRecognizer() {
+                // Skip long-press on macOS (iPad app on Apple Silicon): holding the mouse
+                // button triggers unwanted word-selection and a UIMenuController that can't
+                // be dismissed with the mouse. Standard click-drag selection is sufficient.
+                guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
                 let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
                 recognizer.minimumPressDuration = 0.4
                 addGestureRecognizer(recognizer)
