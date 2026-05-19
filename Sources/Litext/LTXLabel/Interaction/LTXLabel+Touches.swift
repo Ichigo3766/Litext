@@ -161,8 +161,12 @@
                interactionState.clickCount <= 1
             {
                 if isLocationInSelection(location: location) {
+                    // On macOS (iPad app on Apple Silicon), don't show the tap-up copy menu —
+                    // right-click via UIContextMenuInteraction is the correct macOS affordance.
                     #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                        showSelectionMenuController()
+                        if !ProcessInfo.processInfo.isiOSAppOnMac {
+                            showSelectionMenuController()
+                        }
                     #endif
                 } else {
                     clearSelection()
@@ -245,30 +249,16 @@
                 let location = gesture.location(in: self)
                 switch gesture.state {
                 case .began:
+                    // touchesBegan already placed the caret and set up interactionState.
+                    // Do NOT call setInteractionStateToBegin or bumpClickCountIfWithinTimeGap
+                    // here — that would bump clickCount a second time and trigger word selection
+                    // instead of a caret drag.
                     _ = becomeFirstResponder()
-                    setInteractionStateToBegin(initialLocation: location)
-                    bumpClickCountIfWithinTimeGap()
-                    if interactionState.clickCount <= 1 {
-                        if let index = textIndexAtPoint(location) {
-                            selectionRange = NSRange(location: index, length: 0)
-                        }
-                    } else if interactionState.clickCount == 2 {
-                        if let index = textIndexAtPoint(location) {
-                            selectWordAtIndex(index)
-                        }
-                    } else {
-                        if let index = textIndexAtPoint(location) {
-                            selectLineAtIndex(index)
-                        }
-                    }
                 case .changed:
                     guard isTouchReallyMoved(location) else { return }
                     updateSelectionRange(withLocation: location)
                 case .ended, .cancelled, .failed:
                     isInteractionInProgress = false
-                    if !isTouchReallyMoved(location), interactionState.clickCount <= 1 {
-                        clearSelection()
-                    }
                 default:
                     break
                 }
