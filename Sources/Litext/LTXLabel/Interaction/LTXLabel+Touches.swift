@@ -226,8 +226,74 @@
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 DispatchQueue.main.async { self.showSelectionMenuController() }
             }
+
+            /// Installs a dedicated pan gesture for macOS (iPad app on Apple Silicon).
+            /// On macOS, mouse drags arrive as .direct UITouch events, which causes the
+            /// parent UIScrollView's UIPanGestureRecognizer to treat them as finger scrolls
+            /// and cancel our touchesMoved before selection can happen. This gesture
+            /// takes priority over any ancestor scroll view pan via the delegate method below.
+            func installMacSelectionPanGesture() {
+                guard ProcessInfo.processInfo.isiOSAppOnMac else { return }
+                let pan = UIPanGestureRecognizer(target: self, action: #selector(handleMacSelectionPan(_:)))
+                pan.cancelsTouchesInView = true
+                pan.delegate = self
+                addGestureRecognizer(pan)
+            }
+
+            @objc func handleMacSelectionPan(_ gesture: UIPanGestureRecognizer) {
+                guard isSelectable else { return }
+                let location = gesture.location(in: self)
+                switch gesture.state {
+                case .began:
+                    _ = becomeFirstResponder()
+                    setInteractionStateToBegin(initialLocation: location)
+                    bumpClickCountIfWithinTimeGap()
+                    if interactionState.clickCount <= 1 {
+                        if let index = textIndexAtPoint(location) {
+                            selectionRange = NSRange(location: index, length: 0)
+                        }
+                    } else if interactionState.clickCount == 2 {
+                        if let index = textIndexAtPoint(location) {
+                            selectWordAtIndex(index)
+                        }
+                    } else {
+                        if let index = textIndexAtPoint(location) {
+                            selectLineAtIndex(index)
+                        }
+                    }
+                case .changed:
+                    guard isTouchReallyMoved(location) else { return }
+                    updateSelectionRange(withLocation: location)
+                case .ended, .cancelled, .failed:
+                    isInteractionInProgress = false
+                    if !isTouchReallyMoved(location), interactionState.clickCount <= 1 {
+                        clearSelection()
+                    }
+                default:
+                    break
+                }
+            }
         #endif
     }
+
+    #if !os(tvOS) && !os(watchOS)
+        extension LTXLabel: UIGestureRecognizerDelegate {
+            /// On macOS (iPad app on Apple Silicon), our selection pan gesture must take
+            /// priority over any ancestor UIScrollView's pan gesture, otherwise the scroll
+            /// view treats mouse drags as finger scrolls and cancels our selection drag.
+            public func gestureRecognizer(
+                _ gestureRecognizer: UIGestureRecognizer,
+                shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+            ) -> Bool {
+                guard ProcessInfo.processInfo.isiOSAppOnMac else { return false }
+                guard gestureRecognizer is UIPanGestureRecognizer else { return false }
+                // Only yield priority over scroll view pans, not other LTXLabel gestures
+                guard otherGestureRecognizer is UIPanGestureRecognizer else { return false }
+                guard otherGestureRecognizer.view !== self else { return false }
+                return true
+            }
+        }
+    #endif
 
     #if !os(tvOS) && !os(watchOS)
         extension LTXLabel {
