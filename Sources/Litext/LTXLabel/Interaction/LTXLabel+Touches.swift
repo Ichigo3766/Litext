@@ -347,6 +347,10 @@
             #if targetEnvironment(macCatalyst)
                 return true // Mac Catalyst is always a pointer device
             #else
+                // On macOS running as an "Designed for iPad" app, all mouse events
+                // arrive as .direct touch type — not .indirectPointer. Treat the Mac
+                // as a pointer device so click-to-place-cursor and drag-to-select work.
+                if ProcessInfo.processInfo.isiOSAppOnMac { return true }
                 switch touch.type {
                 case .indirectPointer, .pencil:
                     return true
