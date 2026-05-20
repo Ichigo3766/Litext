@@ -95,6 +95,23 @@
 
             if interactionState.clickCount <= 1 {
                 if isPointerDevice(touch: firstTouch) {
+                    // On macOS: Shift+click extends existing selection to the clicked point.
+                    // This is the standard macOS text selection affordance and allows users
+                    // to extend/shrink a selection without drag handles.
+                    if ProcessInfo.processInfo.isiOSAppOnMac,
+                       let existingRange = selectionRange, existingRange.length > 0,
+                       event?.modifierFlags.contains(.shift) == true,
+                       let index = nearestTextIndexAtPoint(location)
+                    {
+                        let existingStart = existingRange.location
+                        let existingEnd = existingRange.location + existingRange.length
+                        let newStart = min(index, existingStart)
+                        let newEnd = max(index, existingEnd)
+                        selectionRange = NSRange(location: newStart, length: newEnd - newStart)
+                        // Also update the drag anchor so subsequent shift+clicks keep working
+                        // from the far end of the selection
+                        return
+                    }
                     if let index = textIndexAtPoint(location) {
                         selectionRange = NSRange(location: index, length: 0)
                     }
