@@ -98,7 +98,8 @@
                     // On macOS: Shift+click extends existing selection to the clicked point.
                     // This is the standard macOS text selection affordance and allows users
                     // to extend/shrink a selection without drag handles.
-                    if ProcessInfo.isRunningOnMac,
+                    if #available(iOS 13.4, *),
+                       ProcessInfo.isRunningOnMac,
                        let existingRange = selectionRange, existingRange.length > 0,
                        event?.modifierFlags.contains(.shift) == true,
                        let index = nearestTextIndexAtPoint(location)
