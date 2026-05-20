@@ -47,7 +47,12 @@ import QuartzCore
             createSelectionLayer(withPath: selectionPath)
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                showSelectionMenuController()
+                // On macOS (iPad app on Apple Silicon), never auto-show the copy menu when
+                // selection changes — this fires on every frame of a drag and cancels the
+                // drag gesture. The user right-clicks to copy on macOS instead.
+                if !ProcessInfo.processInfo.isiOSAppOnMac {
+                    showSelectionMenuController()
+                }
             #endif
 
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
