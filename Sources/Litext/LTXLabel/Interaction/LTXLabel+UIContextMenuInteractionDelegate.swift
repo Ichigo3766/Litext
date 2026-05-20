@@ -32,6 +32,32 @@
                     .init(children: menuItems)
                 }
             #else
+                // On macOS (iPad app on Apple Silicon), right-click / ctrl+click shows a
+                // native popover menu with Copy / Select All / Share — same as macCatalyst.
+                // Auto-select all text so Copy is immediately available.
+                if ProcessInfo.processInfo.isiOSAppOnMac {
+                    guard isSelectable else { return nil }
+                    // Auto-select all text so the user can immediately copy
+                    if selectionRange == nil || selectionRange!.length == 0 {
+                        selectAllText()
+                    }
+                    _ = becomeFirstResponder()
+                    let menuItems: [UIMenuElement] = LTXLabelMenuItem
+                        .textSelectionMenu()
+                        .compactMap { item -> UIAction? in
+                            guard let selector = item.action else { return nil }
+                            guard self.canPerformAction(selector, withSender: nil) else { return nil }
+                            return UIAction(title: item.title, image: item.image) { _ in
+                                self.perform(selector)
+                            }
+                        }
+                    return .init(
+                        identifier: nil,
+                        previewProvider: nil
+                    ) { _ in
+                        .init(children: menuItems)
+                    }
+                }
                 DispatchQueue.main.async {
                     guard self.isSelectable else { return }
                     guard self.isLocationInSelection(location: location) else { return }

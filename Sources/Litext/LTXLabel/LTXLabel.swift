@@ -95,7 +95,6 @@ import QuartzCore
                     installContextMenuInteraction()
                     installTextPointerInteraction()
                     installLongPressGestureRecognizer()
-                    installMacSelectionPanGesture()
                 #endif
 
                 #if !os(tvOS)
