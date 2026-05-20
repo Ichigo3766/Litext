@@ -50,7 +50,7 @@ import QuartzCore
                 // On macOS (iPad app on Apple Silicon), never auto-show the copy menu when
                 // selection changes — this fires on every frame of a drag and cancels the
                 // drag gesture. The user right-clicks to copy on macOS instead.
-                if !ProcessInfo.processInfo.isiOSAppOnMac {
+                if !ProcessInfo.isRunningOnMac {
                     showSelectionMenuController()
                 }
             #endif
@@ -58,7 +58,7 @@ import QuartzCore
             #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
                 // Don't show handles on macOS (iPad app on Apple Silicon) — they can't be
                 // dragged with mouse/trackpad and would only clutter the selection display.
-                if !ProcessInfo.processInfo.isiOSAppOnMac {
+                if !ProcessInfo.isRunningOnMac {
                     selectionHandleStart.isHidden = false
                     selectionHandleEnd.isHidden = false
 

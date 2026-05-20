@@ -110,7 +110,7 @@ import QuartzCore
                     // drag events before touchesMoved gets them, making selection impossible.
                     // Skip adding the handles entirely on macOS; the existing pointer-device
                     // path in touchesMoved handles click-drag selection correctly without them.
-                    if !ProcessInfo.processInfo.isiOSAppOnMac {
+                    if !ProcessInfo.isRunningOnMac {
                         clipsToBounds = false // for selection handle
                         selectionHandleStart.isHidden = true
                         selectionHandleStart.delegate = self

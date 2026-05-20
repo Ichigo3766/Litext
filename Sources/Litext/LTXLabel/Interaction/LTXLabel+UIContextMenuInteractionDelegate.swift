@@ -35,7 +35,7 @@
                 // On macOS (iPad app on Apple Silicon), right-click / ctrl+click shows a
                 // native popover menu with Copy / Select All / Share — same as macCatalyst.
                 // Auto-select all text so Copy is immediately available.
-                if ProcessInfo.processInfo.isiOSAppOnMac {
+                if ProcessInfo.isRunningOnMac {
                     guard isSelectable else { return nil }
                     // Auto-select all text so the user can immediately copy
                     if selectionRange == nil || selectionRange!.length == 0 {

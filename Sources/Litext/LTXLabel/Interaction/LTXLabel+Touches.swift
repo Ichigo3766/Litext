@@ -98,7 +98,7 @@
                     // On macOS: Shift+click extends existing selection to the clicked point.
                     // This is the standard macOS text selection affordance and allows users
                     // to extend/shrink a selection without drag handles.
-                    if ProcessInfo.processInfo.isiOSAppOnMac,
+                    if ProcessInfo.isRunningOnMac,
                        let existingRange = selectionRange, existingRange.length > 0,
                        event?.modifierFlags.contains(.shift) == true,
                        let index = nearestTextIndexAtPoint(location)
@@ -181,7 +181,7 @@
                     // On macOS (iPad app on Apple Silicon), don't show the tap-up copy menu —
                     // right-click via UIContextMenuInteraction is the correct macOS affordance.
                     #if !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
-                        if !ProcessInfo.processInfo.isiOSAppOnMac {
+                        if !ProcessInfo.isRunningOnMac {
                             showSelectionMenuController()
                         }
                     #endif
@@ -221,7 +221,7 @@
             /// fires almost immediately and cancels ongoing touch sequences —
             /// preventing click-drag text selection entirely.
             func installContextMenuInteraction() {
-                guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
+                guard !ProcessInfo.isRunningOnMac else { return }
                 let interaction = UIContextMenuInteraction(delegate: self)
                 addInteraction(interaction)
             }
@@ -237,7 +237,7 @@
                 // Skip long-press on macOS (iPad app on Apple Silicon): holding the mouse
                 // button triggers unwanted word-selection and a UIMenuController that can't
                 // be dismissed with the mouse. Standard click-drag selection is sufficient.
-                guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
+                guard !ProcessInfo.isRunningOnMac else { return }
                 let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
                 recognizer.minimumPressDuration = 0.4
                 addGestureRecognizer(recognizer)
@@ -247,7 +247,7 @@
             /// This replaces UIContextMenuInteraction on macOS to show the copy/select menu
             /// without interfering with primary-click drag selection.
             func installSecondaryClickGestureRecognizer() {
-                guard ProcessInfo.processInfo.isiOSAppOnMac else { return }
+                guard ProcessInfo.isRunningOnMac else { return }
                 if #available(iOS 13.4, *) {
                     let tap = UITapGestureRecognizer(target: self, action: #selector(handleSecondaryClick(_:)))
                     tap.buttonMaskRequired = .secondary
@@ -413,7 +413,7 @@
                 // On macOS running as an "Designed for iPad" app, all mouse events
                 // arrive as .direct touch type — not .indirectPointer. Treat the Mac
                 // as a pointer device so click-to-place-cursor and drag-to-select work.
-                if ProcessInfo.processInfo.isiOSAppOnMac { return true }
+                if ProcessInfo.isRunningOnMac { return true }
                 switch touch.type {
                 case .indirectPointer, .pencil:
                     return true
