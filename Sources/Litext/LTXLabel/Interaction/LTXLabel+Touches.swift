@@ -198,8 +198,13 @@
         }
 
         #if !os(tvOS) && !os(watchOS)
-            /// for handling right click on iOS
+            /// Install UIContextMenuInteraction for right-click menus.
+            /// On macOS (iPad app on Apple Silicon) we skip this entirely because
+            /// UIContextMenuInteraction's internal long-press gesture recognizer
+            /// fires almost immediately and cancels ongoing touch sequences —
+            /// preventing click-drag text selection entirely.
             func installContextMenuInteraction() {
+                guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
                 let interaction = UIContextMenuInteraction(delegate: self)
                 addInteraction(interaction)
             }
@@ -219,6 +224,42 @@
                 let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
                 recognizer.minimumPressDuration = 0.4
                 addGestureRecognizer(recognizer)
+            }
+
+            /// Install a secondary-click (right-click / two-finger tap) gesture for macOS.
+            /// This replaces UIContextMenuInteraction on macOS to show the copy/select menu
+            /// without interfering with primary-click drag selection.
+            func installSecondaryClickGestureRecognizer() {
+                guard ProcessInfo.processInfo.isiOSAppOnMac else { return }
+                if #available(iOS 13.4, *) {
+                    let tap = UITapGestureRecognizer(target: self, action: #selector(handleSecondaryClick(_:)))
+                    tap.buttonMaskRequired = .secondary
+                    addGestureRecognizer(tap)
+                }
+            }
+
+            @available(iOS 13.4, *)
+            @objc func handleSecondaryClick(_ recognizer: UITapGestureRecognizer) {
+                guard isSelectable, recognizer.state == .ended else { return }
+                let location = recognizer.location(in: self)
+                // Auto-select all text so Copy is immediately available if nothing is selected
+                if selectionRange == nil || selectionRange!.length == 0 {
+                    selectAllText()
+                }
+                _ = becomeFirstResponder()
+                // Build and show an edit menu at the right-click location
+                if #available(iOS 16.0, *) {
+                    let interaction = UIEditMenuInteraction(delegate: nil)
+                    addInteraction(interaction)
+                    let config = UIEditMenuConfiguration(identifier: nil, sourcePoint: location)
+                    interaction.presentEditMenu(with: config)
+                    // Clean up the interaction after the menu is dismissed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.removeInteraction(interaction)
+                    }
+                } else {
+                    showSelectionMenuController()
+                }
             }
 
             @objc func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {

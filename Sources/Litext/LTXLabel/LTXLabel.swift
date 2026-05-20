@@ -95,6 +95,7 @@ import QuartzCore
                     installContextMenuInteraction()
                     installTextPointerInteraction()
                     installLongPressGestureRecognizer()
+                    installSecondaryClickGestureRecognizer()
                 #endif
 
                 #if !os(tvOS)
