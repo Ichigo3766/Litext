@@ -93,6 +93,18 @@
             bumpClickCountIfWithinTimeGap()
             if !isSelectable { return }
 
+            // On macOS (iPad app on Apple Silicon), lock the parent scroll view as
+            // soon as a selectable touch begins. This allows vertical mouse drag to
+            // extend the selection across lines instead of scrolling the chat view.
+            #if !os(tvOS) && !os(watchOS)
+                if ProcessInfo.isRunningOnMac, isPointerDevice(touch: firstTouch) {
+                    if let sv = nearestScrollView {
+                        sv.isScrollEnabled = false
+                        selectionLockedScrollView = sv
+                    }
+                }
+            #endif
+
             if interactionState.clickCount <= 1 {
                 if isPointerDevice(touch: firstTouch) {
                     // On macOS: Shift+click extends existing selection to the clicked point.
@@ -166,6 +178,11 @@
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
+            // Restore scroll on the locked scroll view (Mac multiline selection).
+            #if !os(tvOS) && !os(watchOS)
+                selectionLockedScrollView?.isScrollEnabled = true
+                selectionLockedScrollView = nil
+            #endif
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {
@@ -205,6 +222,11 @@
 
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             isInteractionInProgress = false
+            // Restore scroll on the locked scroll view (Mac multiline selection).
+            #if !os(tvOS) && !os(watchOS)
+                selectionLockedScrollView?.isScrollEnabled = true
+                selectionLockedScrollView = nil
+            #endif
             guard touches.count == 1,
                   let firstTouch = touches.first
             else {

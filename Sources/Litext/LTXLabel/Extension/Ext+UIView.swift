@@ -20,6 +20,18 @@
             }
             return nil
         }
+
+        /// Walk up the superview tree and return the first UIScrollView ancestor.
+        var nearestScrollView: UIScrollView? {
+            var view: UIView? = superview
+            while let current = view {
+                if let scrollView = current as? UIScrollView {
+                    return scrollView
+                }
+                view = current.superview
+            }
+            return nil
+        }
     }
 
 #endif

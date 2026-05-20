@@ -83,6 +83,13 @@ import QuartzCore
         var interactionState = InteractionState()
         var flags = Flags()
 
+        // On macOS (iPad app on Apple Silicon), we temporarily disable the nearest
+        // ancestor UIScrollView while a click-drag selection is in progress so the
+        // vertical drag is consumed for text selection instead of scrolling.
+        #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
+            weak var selectionLockedScrollView: UIScrollView?
+        #endif
+
         // MARK: - Initialization
 
         #if canImport(UIKit)
