@@ -13,45 +13,50 @@
 
     @available(iOS 16.0, *)
     extension LTXLabel: UIEditMenuInteractionDelegate {
-        public func editMenuInteraction(
+        // `nonisolated` satisfies the non-isolated protocol requirement; UIKit always
+        // invokes this delegate callback on the main thread, so we re-enter the main
+        // actor via `MainActor.assumeIsolated` to safely touch `LTXLabel` members.
+        public nonisolated func editMenuInteraction(
             _ interaction: UIEditMenuInteraction,
             menuFor configuration: UIEditMenuConfiguration,
             suggestedActions: [UIMenuElement]
         ) -> UIMenu? {
-            // Build the standard actions (Copy, Select All, Share) from suggestedActions
-            // plus our custom Ask and Explain actions.
-            var customActions: [UIAction] = []
+            MainActor.assumeIsolated {
+                // Build the standard actions (Copy, Select All, Share) from suggestedActions
+                // plus our custom Ask and Explain actions.
+                var customActions: [UIAction] = []
 
-            // Ask action — places selected text quoted in the input box
-            if canPerformAction(#selector(askMenuItemTapped), withSender: nil) {
-                let askAction = UIAction(
-                    title: "Ask",
-                    image: UIImage(systemName: "bubble.left")
-                ) { [weak self] _ in
-                    self?.askMenuItemTapped()
+                // Ask action — places selected text quoted in the input box
+                if canPerformAction(#selector(askMenuItemTapped), withSender: nil) {
+                    let askAction = UIAction(
+                        title: "Ask",
+                        image: UIImage(systemName: "bubble.left")
+                    ) { [weak self] _ in
+                        self?.askMenuItemTapped()
+                    }
+                    customActions.append(askAction)
                 }
-                customActions.append(askAction)
-            }
 
-            // Explain action — places "Explain: [selected text]" in the input box
-            if canPerformAction(#selector(explainMenuItemTapped), withSender: nil) {
-                let explainAction = UIAction(
-                    title: "Explain",
-                    image: UIImage(systemName: "lightbulb")
-                ) { [weak self] _ in
-                    self?.explainMenuItemTapped()
+                // Explain action — places "Explain: [selected text]" in the input box
+                if canPerformAction(#selector(explainMenuItemTapped), withSender: nil) {
+                    let explainAction = UIAction(
+                        title: "Explain",
+                        image: UIImage(systemName: "lightbulb")
+                    ) { [weak self] _ in
+                        self?.explainMenuItemTapped()
+                    }
+                    customActions.append(explainAction)
                 }
-                customActions.append(explainAction)
-            }
 
-            if customActions.isEmpty {
-                // No custom actions available — return nil to show default menu only
-                return nil
-            }
+                if customActions.isEmpty {
+                    // No custom actions available — return nil to show default menu only
+                    return nil
+                }
 
-            // Merge: standard system actions first, then Ask/Explain
-            let allActions: [UIMenuElement] = suggestedActions + customActions
-            return UIMenu(children: allActions)
+                // Merge: standard system actions first, then Ask/Explain
+                let allActions: [UIMenuElement] = suggestedActions + customActions
+                return UIMenu(children: allActions)
+            }
         }
     }
 
