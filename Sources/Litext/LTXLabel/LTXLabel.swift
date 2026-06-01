@@ -75,6 +75,13 @@ import QuartzCore
         var selectedLinkForMenuAction: URL?
         nonisolated(unsafe) var selectionLayer: CAShapeLayer?
 
+        /// The bounding rect of the current text selection, in the label's own coordinate space.
+        /// Stored just before the edit menu is presented so the delegate can return it via
+        /// `editMenuInteraction(_:targetRectFor:)` and prevent the menu from overlapping the selection.
+        #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
+            var currentEditMenuTargetRect: CGRect = .zero
+        #endif
+
         #if canImport(UIKit) && !targetEnvironment(macCatalyst) && !os(tvOS) && !os(watchOS)
             var selectionHandleStart: LTXSelectionHandle = .init(type: .start)
             var selectionHandleEnd: LTXSelectionHandle = .init(type: .end)

@@ -340,11 +340,15 @@
                 // for the editMenuInteraction(_:menuFor:suggestedActions:) implementation
                 // which injects the Ask and Explain custom actions.
                 if #available(iOS 16.0, *) {
+                    // Store the selection rect so the delegate's targetRectFor method
+                    // can return it, causing UIKit to place the menu above or below
+                    // rather than on top of the selected text.
+                    currentEditMenuTargetRect = unionRect
                     let interaction = UIEditMenuInteraction(delegate: self)
                     addInteraction(interaction)
                     let config = UIEditMenuConfiguration(
                         identifier: nil,
-                        sourcePoint: CGPoint(x: unionRect.midX, y: unionRect.minY)
+                        sourcePoint: CGPoint(x: unionRect.midX, y: unionRect.midY)
                     )
                     interaction.presentEditMenu(with: config)
                     // Clean up interaction after it dismisses

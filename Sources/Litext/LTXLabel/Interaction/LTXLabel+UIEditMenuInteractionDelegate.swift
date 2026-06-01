@@ -92,6 +92,18 @@
                 return UIMenu(children: actions)
             }
         }
+
+        /// Return the bounding rect of the current text selection so UIKit knows which
+        /// region to avoid. This causes the menu to appear above or below the selected
+        /// text rather than overlapping it.
+        public nonisolated func editMenuInteraction(
+            _ interaction: UIEditMenuInteraction,
+            targetRectFor configuration: UIEditMenuConfiguration
+        ) -> CGRect {
+            MainActor.assumeIsolated {
+                currentEditMenuTargetRect
+            }
+        }
     }
 
 #endif
