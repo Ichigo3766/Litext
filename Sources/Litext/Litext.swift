@@ -15,3 +15,15 @@ public extension NSAttributedString.Key {
     @inline(__always) static let ltxAttachment = LTXAttachmentAttributeName
     @inline(__always) static let ltxLineDrawingCallback = LTXLineDrawingCallbackName
 }
+
+// MARK: - LTXLabel Notification Names
+
+public extension Notification.Name {
+    /// Posted by LTXLabel when the user taps "Ask" in the text selection menu.
+    /// userInfo["selectedText"] contains the selected plain text string.
+    static let ltxLabelAskSelection = Notification.Name("ltxLabelAskSelection")
+
+    /// Posted by LTXLabel when the user taps "Explain" in the text selection menu.
+    /// userInfo["selectedText"] contains the selected plain text string.
+    static let ltxLabelExplainSelection = Notification.Name("ltxLabelExplainSelection")
+}

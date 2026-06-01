@@ -333,27 +333,49 @@
                     unionRect = unionRect.union(rect)
                 }
 
-                let menuController = UIMenuController.shared
-
-                let items = LTXLabelMenuItem
-                    .textSelectionMenu()
-                    .compactMap { item -> UIMenuItem? in
-                        guard let selector = item.action else { return nil }
-                        guard canPerformAction(selector, withSender: nil) else { return nil }
-                        return UIMenuItem(title: item.title, action: selector)
-                    }
-                menuController.menuItems = items
-
                 Self.menuOwnerIdentifier = id
-                menuController.showMenu(
-                    from: self,
-                    rect: unionRect.insetBy(dx: -8, dy: -8)
-                )
+
+                // iOS 16+: use UIEditMenuInteraction for the modern system-style popup.
+                // `self` is the delegate — see LTXLabel+UIEditMenuInteractionDelegate.swift
+                // for the editMenuInteraction(_:menuFor:suggestedActions:) implementation
+                // which injects the Ask and Explain custom actions.
+                if #available(iOS 16.0, *) {
+                    let interaction = UIEditMenuInteraction(delegate: self)
+                    addInteraction(interaction)
+                    let config = UIEditMenuConfiguration(
+                        identifier: nil,
+                        sourcePoint: CGPoint(x: unionRect.midX, y: unionRect.minY)
+                    )
+                    interaction.presentEditMenu(with: config)
+                    // Clean up interaction after it dismisses
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        self?.removeInteraction(interaction)
+                    }
+                } else {
+                    // Fallback for iOS 15 and earlier
+                    let items = LTXLabelMenuItem
+                        .textSelectionMenu()
+                        .compactMap { item -> UIMenuItem? in
+                            guard let selector = item.action else { return nil }
+                            guard canPerformAction(selector, withSender: nil) else { return nil }
+                            return UIMenuItem(title: item.title, action: selector)
+                        }
+                    let menuController = UIMenuController.shared
+                    menuController.menuItems = items
+                    menuController.showMenu(
+                        from: self,
+                        rect: unionRect.insetBy(dx: -8, dy: -8)
+                    )
+                }
             }
 
             func hideSelectionMenuController() {
                 guard Self.menuOwnerIdentifier == id else { return }
-                UIMenuController.shared.hideMenu()
+                if #available(iOS 16.0, *) {
+                    // UIEditMenuInteraction dismisses itself; nothing needed
+                } else {
+                    UIMenuController.shared.hideMenu()
+                }
             }
 
             @objc func copyMenuItemTapped() {
@@ -376,6 +398,30 @@
                 let activityController = UIActivityViewController(activityItems: [text], applicationActivities: nil)
                 activityController.popoverPresentationController?.sourceView = self
                 parentViewController?.present(activityController, animated: true)
+            }
+
+            /// Posts a notification so the host app can fill the chat input with
+            /// the selected text quoted, ready for the user to type a follow-up question.
+            @objc func askMenuItemTapped() {
+                guard let text = selectedPlainText(), !text.isEmpty else { return }
+                clearSelection()
+                NotificationCenter.default.post(
+                    name: .ltxLabelAskSelection,
+                    object: nil,
+                    userInfo: ["selectedText": text]
+                )
+            }
+
+            /// Posts a notification so the host app can fill the chat input with
+            /// "Explain: [selected text]", ready to send immediately.
+            @objc func explainMenuItemTapped() {
+                guard let text = selectedPlainText(), !text.isEmpty else { return }
+                clearSelection()
+                NotificationCenter.default.post(
+                    name: .ltxLabelExplainSelection,
+                    object: nil,
+                    userInfo: ["selectedText": text]
+                )
             }
 
             @objc private func copyKeyCommand() {
@@ -401,6 +447,12 @@
                     return selectionRange != selectAllRange()
                 }
                 if action == #selector(shareMenuItemTapped) {
+                    return (selectedPlainText() ?? "").isEmpty == false
+                }
+                if action == #selector(askMenuItemTapped) {
+                    return (selectedPlainText() ?? "").isEmpty == false
+                }
+                if action == #selector(explainMenuItemTapped) {
                     return (selectedPlainText() ?? "").isEmpty == false
                 }
                 return false

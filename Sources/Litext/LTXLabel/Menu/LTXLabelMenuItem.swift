@@ -13,6 +13,8 @@
         case copy
         case selectAll
         case share
+        case ask
+        case explain
 
         var action: Selector? {
             switch self {
@@ -22,6 +24,10 @@
                 #selector(LTXLabel.selectAllTapped)
             case .share:
                 #selector(LTXLabel.shareMenuItemTapped)
+            case .ask:
+                #selector(LTXLabel.askMenuItemTapped)
+            case .explain:
+                #selector(LTXLabel.explainMenuItemTapped)
             }
         }
 
@@ -33,6 +39,10 @@
                 LocalizedText.selectAll
             case .share:
                 LocalizedText.share
+            case .ask:
+                "Ask"
+            case .explain:
+                "Explain"
             }
         }
 
@@ -44,6 +54,10 @@
                 UIImage(systemName: "selection.pin.in.out")
             case .share:
                 UIImage(systemName: "square.and.arrow.up")
+            case .ask:
+                UIImage(systemName: "bubble.left")
+            case .explain:
+                UIImage(systemName: "lightbulb")
             }
         }
 
