@@ -3,8 +3,12 @@
 //  Litext
 //
 //  Provides UIEditMenuInteractionDelegate conformance for iOS 16+.
-//  This wires up the Ask and Explain custom menu items in the modern
-//  system edit menu shown after text selection.
+//  This wires up Copy, Select All, Share, Ask and Explain actions in the
+//  modern system edit menu shown after text selection.
+//
+//  NOTE: LTXLabel does NOT conform to UITextInput, so the system cannot
+//  auto-populate `suggestedActions` with Copy/Select All/Share. We build
+//  all actions manually here so the full set is always available.
 //
 
 #if canImport(UIKit) && !os(tvOS) && !os(watchOS)
@@ -22,11 +26,47 @@
             suggestedActions: [UIMenuElement]
         ) -> UIMenu? {
             MainActor.assumeIsolated {
-                // Build the standard actions (Copy, Select All, Share) from suggestedActions
-                // plus our custom Ask and Explain actions.
-                var customActions: [UIAction] = []
+                var actions: [UIMenuElement] = []
 
-                // Ask action — places selected text quoted in the input box
+                // --- Standard actions (system doesn't auto-add these because LTXLabel
+                //     doesn't conform to UITextInput, so we build them manually) ---
+
+                // Copy
+                if canPerformAction(#selector(copyMenuItemTapped), withSender: nil) {
+                    let copyAction = UIAction(
+                        title: "Copy",
+                        image: UIImage(systemName: "doc.on.doc")
+                    ) { [weak self] _ in
+                        self?.copyMenuItemTapped()
+                    }
+                    actions.append(copyAction)
+                }
+
+                // Select All
+                if canPerformAction(#selector(selectAllTapped), withSender: nil) {
+                    let selectAllAction = UIAction(
+                        title: "Select All",
+                        image: UIImage(systemName: "text.cursor")
+                    ) { [weak self] _ in
+                        self?.selectAllTapped()
+                    }
+                    actions.append(selectAllAction)
+                }
+
+                // Share
+                if canPerformAction(#selector(shareMenuItemTapped), withSender: nil) {
+                    let shareAction = UIAction(
+                        title: "Share",
+                        image: UIImage(systemName: "square.and.arrow.up")
+                    ) { [weak self] _ in
+                        self?.shareMenuItemTapped()
+                    }
+                    actions.append(shareAction)
+                }
+
+                // --- Custom Ask / Explain actions ---
+
+                // Ask — places selected text quoted in the input box
                 if canPerformAction(#selector(askMenuItemTapped), withSender: nil) {
                     let askAction = UIAction(
                         title: "Ask",
@@ -34,10 +74,10 @@
                     ) { [weak self] _ in
                         self?.askMenuItemTapped()
                     }
-                    customActions.append(askAction)
+                    actions.append(askAction)
                 }
 
-                // Explain action — places "Explain: [selected text]" in the input box
+                // Explain — places "Explain: [selected text]" in the input box
                 if canPerformAction(#selector(explainMenuItemTapped), withSender: nil) {
                     let explainAction = UIAction(
                         title: "Explain",
@@ -45,17 +85,11 @@
                     ) { [weak self] _ in
                         self?.explainMenuItemTapped()
                     }
-                    customActions.append(explainAction)
+                    actions.append(explainAction)
                 }
 
-                if customActions.isEmpty {
-                    // No custom actions available — return nil to show default menu only
-                    return nil
-                }
-
-                // Merge: standard system actions first, then Ask/Explain
-                let allActions: [UIMenuElement] = suggestedActions + customActions
-                return UIMenu(children: allActions)
+                guard !actions.isEmpty else { return nil }
+                return UIMenu(children: actions)
             }
         }
     }
