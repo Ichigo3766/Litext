@@ -344,17 +344,22 @@
                     // can return it, causing UIKit to place the menu above or below
                     // rather than on top of the selected text.
                     currentEditMenuTargetRect = unionRect
+                    // Remove any existing interaction before creating a new one so that
+                    // re-selecting (dragging handles) replaces the menu at the new position.
+                    if let old = activeEditMenuInteraction {
+                        removeInteraction(old)
+                        activeEditMenuInteraction = nil
+                    }
                     let interaction = UIEditMenuInteraction(delegate: self)
+                    activeEditMenuInteraction = interaction
                     addInteraction(interaction)
                     let config = UIEditMenuConfiguration(
                         identifier: nil,
                         sourcePoint: CGPoint(x: unionRect.midX, y: unionRect.midY)
                     )
                     interaction.presentEditMenu(with: config)
-                    // Clean up interaction after it dismisses
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                        self?.removeInteraction(interaction)
-                    }
+                    // No timer — UIEditMenuInteraction dismisses itself naturally when
+                    // the user taps outside, taps an action, or starts scrolling.
                 } else {
                     // Fallback for iOS 15 and earlier
                     let items = LTXLabelMenuItem
@@ -376,7 +381,11 @@
             func hideSelectionMenuController() {
                 guard Self.menuOwnerIdentifier == id else { return }
                 if #available(iOS 16.0, *) {
-                    // UIEditMenuInteraction dismisses itself; nothing needed
+                    if let interaction = activeEditMenuInteraction {
+                        interaction.dismissMenu()
+                        removeInteraction(interaction)
+                        activeEditMenuInteraction = nil
+                    }
                 } else {
                     UIMenuController.shared.hideMenu()
                 }

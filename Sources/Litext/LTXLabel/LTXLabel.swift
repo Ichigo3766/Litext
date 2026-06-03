@@ -75,6 +75,10 @@ import QuartzCore
         var selectedLinkForMenuAction: URL?
         nonisolated(unsafe) var selectionLayer: CAShapeLayer?
 
+        /// The active UIEditMenuInteraction instance. Stored so we can replace it cleanly
+        /// when the selection changes and remove it when selection is cleared.
+        var activeEditMenuInteraction: UIEditMenuInteraction? = nil
+
         /// The bounding rect of the current text selection, in the label's own coordinate space.
         /// Stored just before the edit menu is presented so the delegate can return it via
         /// `editMenuInteraction(_:targetRectFor:)` and prevent the menu from overlapping the selection.
