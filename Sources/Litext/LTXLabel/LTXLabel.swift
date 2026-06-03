@@ -77,7 +77,13 @@ import QuartzCore
 
         /// The active UIEditMenuInteraction instance. Stored so we can replace it cleanly
         /// when the selection changes and remove it when selection is cleared.
-        var activeEditMenuInteraction: UIEditMenuInteraction? = nil
+        @available(iOS 16.0, *)
+        var activeEditMenuInteraction: UIEditMenuInteraction? {
+            get { _activeEditMenuInteraction as? UIEditMenuInteraction }
+            set { _activeEditMenuInteraction = newValue }
+        }
+
+        var _activeEditMenuInteraction: AnyObject? = nil
 
         /// The bounding rect of the current text selection, in the label's own coordinate space.
         /// Stored just before the edit menu is presented so the delegate can return it via
