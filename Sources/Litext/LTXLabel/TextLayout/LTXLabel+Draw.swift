@@ -10,12 +10,54 @@ import Foundation
 #if canImport(UIKit) && !os(watchOS)
     import UIKit
 
-    public extension LTXLabel {
+    final class LTXLabelDrawingView: UIView {
+        weak var label: LTXLabel?
+
         override func draw(_: CGRect) {
-            guard let context = UIGraphicsGetCurrentContext() else { return }
-            UIGraphicsPushContext(context)
-            textLayout.draw(in: context)
-            UIGraphicsPopContext()
+            guard let label, let context = UIGraphicsGetCurrentContext() else { return }
+            context.translateBy(x: -frame.minX, y: -frame.minY)
+            label.textLayout.draw(in: context)
+        }
+    }
+
+    extension LTXLabel {
+        func observeDrawingViewport() {
+            drawingObservers.removeAll()
+            guard window != nil else {
+                updateDrawingViewport()
+                return
+            }
+            var ancestor = superview
+            while let view = ancestor {
+                if let scroll = view as? UIScrollView {
+                    drawingObservers.append(scroll.observe(\.contentOffset) { [weak self] _, _ in
+                        self?.updateDrawingViewport()
+                    })
+                }
+                ancestor = view.superview
+            }
+            updateDrawingViewport()
+        }
+
+        func updateDrawingViewport() {
+            var visible = window.map { convert($0.bounds, from: $0).intersection(bounds) } ?? .zero
+            var ancestor = superview
+            while let view = ancestor {
+                if view.clipsToBounds {
+                    visible = visible.intersection(convert(view.bounds, from: view))
+                }
+                ancestor = view.superview
+            }
+            guard window != nil, !visible.isNull, !visible.isEmpty else {
+                drawingView.frame = .zero
+                drawingView.layer.contents = nil
+                return
+            }
+            let frame = visible.integral.intersection(bounds)
+            if drawingView.frame != frame {
+                drawingView.frame = frame
+                drawingView.setNeedsDisplay()
+            }
         }
     }
 

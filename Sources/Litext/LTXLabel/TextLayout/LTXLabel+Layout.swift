@@ -47,6 +47,7 @@ import QuartzCore
             override func layoutSubviews() {
                 super.layoutSubviews()
                 performLayout()
+                updateDrawingViewport()
             }
 
             override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -89,7 +90,7 @@ import QuartzCore
             if layoutUpdateWasMade {
                 updateSelectionLayer()
                 #if canImport(UIKit)
-                    setNeedsDisplay()
+                    drawingView.setNeedsDisplay()
                 #elseif canImport(AppKit)
                     needsDisplay = true
                 #endif

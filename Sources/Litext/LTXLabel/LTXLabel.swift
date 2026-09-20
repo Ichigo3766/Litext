@@ -110,8 +110,16 @@ import QuartzCore
         // MARK: - Initialization
 
         #if canImport(UIKit)
+            let drawingView = LTXLabelDrawingView()
+            var drawingObservers: [NSKeyValueObservation] = []
+
             override public init(frame: CGRect) {
                 super.init(frame: frame)
+                drawingView.label = self
+                drawingView.isUserInteractionEnabled = false
+                drawingView.isOpaque = false
+                drawingView.backgroundColor = .clear
+                insertSubview(drawingView, at: 0)
                 registerNotificationCenterForSelectionDeduplicate()
 
                 backgroundColor = .clear
@@ -180,6 +188,7 @@ import QuartzCore
                 super.didMoveToWindow()
                 clearSelection()
                 invalidateTextLayout()
+                observeDrawingViewport()
             }
 
         #elseif canImport(AppKit)
