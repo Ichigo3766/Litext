@@ -55,7 +55,12 @@ import Foundation
             }
             let frame = visible.integral.intersection(bounds)
             if drawingView.frame != frame {
-                drawingView.frame = frame
+                // Wrap in performWithoutAnimation to prevent UIKit's implicit animation
+                // transaction (e.g. keyboard slide-up) from interpolating the drawing
+                // surface frame, which would visibly shrink the text during keyboard open.
+                UIView.performWithoutAnimation {
+                    drawingView.frame = frame
+                }
                 drawingView.setNeedsDisplay()
             }
         }
