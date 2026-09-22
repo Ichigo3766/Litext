@@ -28,8 +28,7 @@ The original fork at `e953e5c` fails the ancestor-move pixel reproduction; the
 small fix in #1 and this upstream-sync version pass. The maximum drawing surface
 remains the clipped visible viewport, not the full document height.
 
-Validation: 16 tests passed on iOS 18.4; the initial 15-test suite also passed on
-iOS 26.5. 31 upstream SwiftPM tests
+Validation: 16 tests passed on both iOS 18.4 and iOS 26.5. 31 upstream SwiftPM tests
 passed on macOS. A Release build of the existing MarkdownView consumer at
 `2654e0d8254816bb9c1bdcbb73fa43bcc0f9f429` compiled against the local updated
 package without consumer source edits. Mac Catalyst also built successfully.
