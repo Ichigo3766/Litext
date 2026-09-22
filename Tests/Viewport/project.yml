@@ -1,0 +1,41 @@
+name: ViewportTests
+options:
+  deploymentTarget:
+    iOS: '18.1'
+settings:
+  base:
+    CODE_SIGN_IDENTITY: '-'
+    CODE_SIGNING_REQUIRED: NO
+    GENERATE_INFOPLIST_FILE: YES
+    SWIFT_VERSION: '6.0'
+packages:
+  Litext:
+    path: ../..
+targets:
+  ViewportHost:
+    type: application
+    platform: iOS
+    sources: Host.swift
+    dependencies:
+      - package: Litext
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.example.litext.viewport-host
+      INFOPLIST_KEY_UILaunchScreen_Generation: YES
+  ViewportTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: ViewportTests.swift
+    dependencies:
+      - target: ViewportHost
+      - package: Litext
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.example.litext.viewport-tests
+      TEST_HOST: '$(BUILT_PRODUCTS_DIR)/ViewportHost.app/ViewportHost'
+schemes:
+  ViewportTests:
+    build:
+      targets:
+        ViewportHost: all
+        ViewportTests: [test]
+    test:
+      targets: [ViewportTests]
