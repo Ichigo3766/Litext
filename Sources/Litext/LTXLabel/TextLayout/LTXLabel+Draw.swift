@@ -27,13 +27,19 @@ import Foundation
                 updateDrawingViewport()
                 return
             }
-            var ancestor = superview
+            var ancestor: UIView? = self
             while let view = ancestor {
-                if let scroll = view as? UIScrollView {
-                    drawingObservers.append(scroll.observe(\.contentOffset) { [weak self] _, _ in
-                        self?.updateDrawingViewport()
-                    })
-                }
+                // Scrolling changes bounds; pagination can instead move an ancestor
+                // without laying out this label or changing the scroll offset.
+                drawingObservers.append(view.layer.observe(\.bounds) { [weak self] _, _ in
+                    MainActor.assumeIsolated { self?.updateDrawingViewport() }
+                })
+                drawingObservers.append(view.layer.observe(\.position) { [weak self] _, _ in
+                    MainActor.assumeIsolated { self?.updateDrawingViewport() }
+                })
+                drawingObservers.append(view.layer.observe(\.transform) { [weak self] _, _ in
+                    MainActor.assumeIsolated { self?.updateDrawingViewport() }
+                })
                 ancestor = view.superview
             }
             updateDrawingViewport()
