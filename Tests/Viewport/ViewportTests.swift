@@ -1,6 +1,6 @@
-import XCTest
-import UIKit
 @testable import Litext
+import UIKit
+import XCTest
 
 @MainActor
 final class ViewportTests: XCTestCase {
@@ -62,7 +62,7 @@ final class ViewportTests: XCTestCase {
         f.label.frame.size.height = 12000
         f.row.frame.size.height = 12000
         f.window.layoutIfNeeded()
-        for index in 0..<100 {
+        for index in 0 ..< 100 {
             f.scroll.contentOffset.y = CGFloat(index * 70 + 900)
             f.row.frame.origin.y = CGFloat(index * 70 + 800)
             XCTAssertEqual(f.label.drawingView.frame, CGRect(x: 0, y: 100, width: 300, height: 400))

@@ -12,13 +12,29 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 sectionLabel("Basic Styled Text")
-                LitextLabel(attributedString: basicStyledText())
+                TextLabel(attributedString: basicStyledText())
 
                 sectionLabel("Code Block")
-                LitextLabel(attributedString: codeBlockText())
+                TextLabel(attributedString: codeBlockText())
 
                 sectionLabel("Mixed Rich Text")
-                LitextLabel(attributedString: mixedText())
+                TextLabel(attributedString: mixedText())
+
+                sectionLabel("Linked Attachment")
+                TextLabel(attributedString: linkedAttachmentText())
+                    .accessibilityIdentifier("fixture.attachment.linked")
+
+                sectionLabel("RTL / Bidi")
+                TextLabel(attributedString: rtlBidiText())
+                    .accessibilityIdentifier("fixture.rtl")
+
+                sectionLabel("Line Drawing")
+                TextLabel(attributedString: lineDrawingText())
+                    .accessibilityIdentifier("fixture.line-drawing")
+
+                sectionLabel("Empty")
+                TextLabel(attributedString: NSAttributedString(string: ""))
+                    .accessibilityIdentifier("fixture.empty")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 12)
@@ -63,38 +79,30 @@ extension ContentView {
         return s
     }
 
-    /// Code block using LTXAttachment + AnyView
+    /// Code block using TextLabel.Attachment + AnyView
     func codeBlockText() -> NSAttributedString {
         let s = NSMutableAttributedString()
         let orange = UIColor(red: 1, green: 0.6, blue: 0.2, alpha: 1)
         s.append(attr("Call ", font: body14, color: .white))
-        s.append(attr("LitextLabel(", font: mono12, color: orange))
+        s.append(attr("TextLabel(", font: mono12, color: orange))
         s.append(attr("attributedString:", font: mono12, color: .white))
         s.append(attr(")\n", font: mono12, color: orange))
 
         // Inline code block as attachment
-        let codeText = "let label = LitextLabel()\nlabel.attributedText = str"
+        let codeText = "TextLabel(attributedString: str)"
         let blockWidth: CGFloat = WKInterfaceDevice.current().screenBounds.width - 20
         let codeFont = UIFont.monospacedSystemFont(ofSize: 10, weight: .regular)
         let lineCount = CGFloat(codeText.components(separatedBy: "\n").count)
         let blockHeight = ceil(codeFont.lineHeight * lineCount + 12 + 6) // 6pt padding top + bottom + 6pt top gap
 
-        let attachment = LTXAttachment()
+        let attachment = TextLabel.Attachment()
         attachment.size = CGSize(width: blockWidth, height: blockHeight)
         attachment.swiftUIView = AnyView(
             CodeBlockView(code: codeText)
                 .frame(width: blockWidth, height: blockHeight)
         )
 
-        let attachStr = NSMutableAttributedString(string: LTXReplacementText)
-        attachStr.addAttribute(.ltxAttachment, value: attachment, range: NSRange(location: 0, length: 1))
-        let runDelegate = attachment.runDelegate
-        attachStr.addAttribute(
-            kCTRunDelegateAttributeName as NSAttributedString.Key,
-            value: runDelegate,
-            range: NSRange(location: 0, length: 1)
-        )
-        s.append(attachStr)
+        s.append(attachment.attributedString())
         return s
     }
 
@@ -111,6 +119,47 @@ extension ContentView {
         s.append(attr("colors", font: body14, color: pink))
         s.append(attr(", attachments, and more.", font: body14, color: .white))
         return s
+    }
+
+    func linkedAttachmentText() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        result.append(attr("Tap-style linked view: ", font: body14, color: .white))
+
+        let attachment = TextLabel.Attachment()
+        attachment.size = CGSize(width: 120, height: 28)
+        attachment.swiftUIView = AnyView(
+            Text("LINKED VIEW")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 120, height: 28)
+                .background(.blue)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        )
+
+        result.append(attachment.attributedString(attributes: [
+            .link: URL(string: "https://example.com/watch-linked-attachment")!,
+        ]))
+        return result
+    }
+
+    func rtlBidiText() -> NSAttributedString {
+        attr("RTL / bidi: English שלום عربى 123 mixed.", font: body14, color: .white)
+    }
+
+    func lineDrawingText() -> NSAttributedString {
+        let action = TextLabel.LineDrawingAction { context, line, origin in
+            var descent: CGFloat = 0
+            let width = CGFloat(CTLineGetTypographicBounds(line, nil, &descent, nil))
+            let underlineY = origin.y - descent - CGFloat(2)
+            context.setStrokeColor(UIColor.green.cgColor)
+            context.setLineWidth(1)
+            context.move(to: CGPoint(x: origin.x, y: underlineY))
+            context.addLine(to: CGPoint(x: origin.x + width, y: underlineY))
+            context.strokePath()
+        }
+        let text = NSMutableAttributedString(attributedString: attr("Line callback underline.", font: body14, color: .white))
+        text.addAttribute(.litextLineDrawingAction, value: action, range: NSRange(location: 0, length: text.length))
+        return text
     }
 
     private func attr(

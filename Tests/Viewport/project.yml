@@ -8,6 +8,8 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     GENERATE_INFOPLIST_FILE: YES
     SWIFT_VERSION: '6.0'
+    ENABLE_TESTABILITY: YES
+    ONLY_ACTIVE_ARCH: YES
 packages:
   Litext:
     path: ../..
@@ -24,7 +26,10 @@ targets:
   ViewportTests:
     type: bundle.unit-test
     platform: iOS
-    sources: ViewportTests.swift
+    sources:
+      - ViewportTests.swift
+      - CompatibilityTests.swift
+      - RendererTests.swift
     dependencies:
       - target: ViewportHost
       - package: Litext
