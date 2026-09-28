@@ -45,24 +45,47 @@ import Foundation
         }
 
         func updateDrawingViewport() {
-            var visible = window.map { convert($0.bounds, from: $0).intersection(bounds) } ?? .zero
+            guard let window else {
+                if drawingView.frame != .zero {
+                    drawingView.frame = .zero
+                    drawingView.layer.contents = nil
+                }
+                return
+            }
+            var visible = convert(window.bounds, from: window).intersection(bounds)
             var ancestor = superview
-            while let view = ancestor {
+            while let view = ancestor, !visible.isNull {
                 if view.clipsToBounds {
                     visible = visible.intersection(convert(view.bounds, from: view))
                 }
                 ancestor = view.superview
             }
-            guard window != nil, !visible.isNull, !visible.isEmpty else {
-                drawingView.frame = .zero
-                drawingView.layer.contents = nil
+            guard !visible.isNull, !visible.isEmpty else {
+                // Off screen: release the backing store once, then do nothing on
+                // further ancestor moves (each scroll frame notifies every label).
+                if drawingView.frame != .zero {
+                    UIView.performWithoutAnimation { drawingView.frame = .zero }
+                    drawingView.layer.contents = nil
+                }
                 return
             }
-            let frame = visible.integral.intersection(bounds)
-            if drawingView.frame != frame {
-                UIView.performWithoutAnimation { drawingView.frame = frame }
-                drawingView.setNeedsDisplay()
+            let overscan = window.bounds.height / 2
+            // Keep painting unchanged while the visible part still fits inside the
+            // current surface. Re-fitting the surface to the exact visible rect on
+            // every scroll frame repainted every on-screen label each frame, which
+            // held scrolling well below the display's refresh rate.
+            let current = drawingView.frame
+            if !current.isEmpty, current.contains(visible), bounds.contains(current),
+               current.height <= visible.height + 2 * overscan + 1 {
+                return
             }
+            // Grow the surface by an overscan margin so the next repaint happens only
+            // after about half a screen of scrolling. Memory stays bounded: at most
+            // the visible area plus one extra screen height per label.
+            let frame = visible.insetBy(dx: 0, dy: -overscan).integral.intersection(bounds)
+            guard drawingView.frame != frame else { return }
+            UIView.performWithoutAnimation { drawingView.frame = frame }
+            drawingView.setNeedsDisplay()
         }
     }
 
