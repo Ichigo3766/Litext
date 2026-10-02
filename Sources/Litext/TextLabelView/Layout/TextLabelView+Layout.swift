@@ -49,11 +49,17 @@ import QuartzCore
             let suggested = textLayout.sizeThatFits(
                 constraintSize
             )
+            var height = suggested.height
+            if revealsHeight, constraintSize.width < .greatestFiniteMagnitude,
+               let revealed = textLayout.revealedHeight(forWidth: constraintSize.width, limit: revealLimit)
+            {
+                height = min(height, revealed)
+            }
             // Round up to the pixel grid so the host layout system never sizes the
             // view fractionally smaller than the measured text.
             return CGSize(
                 width: pixelCeil(suggested.width),
-                height: pixelCeil(suggested.height)
+                height: pixelCeil(height)
             )
         }
 
@@ -133,6 +139,41 @@ import QuartzCore
                 updateSelectionLayer(presentsMenu: false)
                 setNeedsTextDisplay()
             }
+        }
+
+        /// Pushes the reveal state into the layout and repaints only the lines whose
+        /// appearance changed between `previous` and the current limit.
+        func applyReveal(from previous: CGFloat?) {
+            let oldFade = textLayout.revealFade
+            textLayout.revealLimit = revealLimit
+            textLayout.revealFade = revealFade
+            if revealsHeight {
+                let width = preferredMaxLayoutWidth > 0 ? preferredMaxLayoutWidth : lastContainerSize.width
+                let height = textLayout.revealedHeight(forWidth: width, limit: revealLimit)
+                if height != lastRevealedHeight {
+                    lastRevealedHeight = height
+                    invalidateIntrinsicContentSize()
+                }
+            }
+            guard canDrawTextLayout else { return }
+            for region in highlightRegions where region.kind == .attachment {
+                guard let attachment = region.attributes[.litextAttachment] as? TextLabel.Attachment,
+                      let view = attachment.view else { continue }
+                let hidden = revealLimit.map { CGFloat(region.stringRange.location) >= $0 } ?? false
+                if view.isHidden != hidden { view.isHidden = hidden }
+            }
+            let span = max(oldFade, revealFade)
+            textLayout.revealFade = span
+            let dirty = textLayout.revealDirtyRect(from: previous, to: revealLimit)
+            textLayout.revealFade = revealFade
+            guard let dirty else { return }
+            #if canImport(UIKit)
+                let rect = convertRectFromTextLayout(dirty, insetForInteraction: false)
+                    .offsetBy(dx: -drawingView.frame.minX, dy: -drawingView.frame.minY)
+                drawingView.setNeedsDisplay(rect)
+            #elseif canImport(AppKit)
+                setNeedsDisplay(convertRectFromTextLayout(dirty, insetForInteraction: false))
+            #endif
         }
 
         func setNeedsTextDisplay() {

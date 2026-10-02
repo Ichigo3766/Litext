@@ -37,6 +37,8 @@ import Foundation
 
                 let convertedRect = convertRectFromTextLayout(firstRect, insetForInteraction: false)
                 view.frame = pixelAlign(convertedRect)
+                let hidden = revealLimit.map { CGFloat(highlightRegion.stringRange.location) >= $0 } ?? false
+                if view.isHidden != hidden { view.isHidden = hidden }
             }
 
             for view in viewsToRemove {

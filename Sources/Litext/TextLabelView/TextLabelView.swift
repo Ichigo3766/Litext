@@ -88,8 +88,42 @@ import QuartzCore
         // MARK: - Internal Properties
 
         var textLayout: TextLabel.Layout = .init(attributedString: .init()) {
-            didSet { invalidateTextLayout() }
+            didSet {
+                textLayout.revealLimit = revealLimit
+                textLayout.revealFade = revealFade
+                invalidateTextLayout()
+            }
         }
+
+        /// Draw-time reveal position in UTF-16 offsets of `attributedText`. Text at or
+        /// beyond it is not drawn; the `revealFade` characters before it fade in.
+        /// `nil` shows everything. Changing it repaints only the affected lines and
+        /// never triggers layout, so it is cheap enough to drive every display frame.
+        open var revealLimit: CGFloat? {
+            didSet {
+                guard revealLimit != oldValue else { return }
+                applyReveal(from: oldValue)
+            }
+        }
+
+        open var revealFade: CGFloat = 0 {
+            didSet {
+                guard revealFade != oldValue else { return }
+                applyReveal(from: revealLimit)
+            }
+        }
+
+        /// When `true`, the view's intrinsic height covers only the lines the reveal
+        /// has reached, so a block grows one line at a time instead of claiming its
+        /// full height up front.
+        open var revealsHeight: Bool = false {
+            didSet {
+                guard revealsHeight != oldValue else { return }
+                lastRevealedHeight = nil
+                invalidateIntrinsicContentSize()
+            }
+        }
+        public internal(set) var lastRevealedHeight: CGFloat?
 
         var attachmentViews: Set<PlatformView> = []
         var highlightRegions: [TextLabel.HighlightRegion] {

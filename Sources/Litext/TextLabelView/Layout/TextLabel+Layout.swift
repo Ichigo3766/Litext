@@ -54,6 +54,12 @@ extension TextLabel {
             _highlightRegionsArray
         }
 
+        /// Characters at or beyond this fractional string position are not drawn, and
+        /// the `revealFade` characters before it fade in. `nil` draws everything.
+        /// Changing it never re-lays-out; it only affects drawing.
+        open var revealLimit: CGFloat?
+        open var revealFade: CGFloat = 0
+
         open var containerSize: CGSize {
             didSet {
                 guard containerSize != oldValue else { return }
@@ -71,6 +77,7 @@ extension TextLabel {
         private var suggestedSizeHistory: [(input: CGSize, output: CGSize)] = []
         private var naturalSizeCache: CGSize?
         private var measurementFill: FrameFill?
+        private var revealBottoms: (width: CGFloat, entries: [(start: Int, bottom: CGFloat)])?
 
         private lazy var hasLineDrawingActions: Bool = attributedStringHasLineDrawingActions()
         private lazy var hasHighlightAttributes: Bool = attributedStringHasHighlightAttributes()
@@ -109,6 +116,7 @@ extension TextLabel {
             suggestedSizeHistory.removeAll()
             naturalSizeCache = nil
             measurementFill = nil
+            revealBottoms = nil
             // CoreText caches the typographic bounds it obtained from a run delegate inside
             // the framesetter, and never asks again for the lifetime of that framesetter.
             // Rebuilding lines from the existing one would pick up an attachment's new width
@@ -230,7 +238,99 @@ extension TextLabel {
         /// flipped into CoreText's coordinate space. Override to draw a line's glyph
         /// runs yourself — with per-run alpha, say — instead of `CTLineDraw`.
         open func draw(line: CTLine, at _: Int, in context: CGContext) {
-            CTLineDraw(line, context)
+            guard let limit = revealLimit else {
+                CTLineDraw(line, context)
+                return
+            }
+            let range = CTLineGetStringRange(line)
+            let start = CGFloat(range.location)
+            let end = start + CGFloat(range.length)
+            if start >= limit { return }
+            if end <= limit - revealFade {
+                CTLineDraw(line, context)
+                return
+            }
+            drawFading(line: line, limit: limit, in: context)
+        }
+
+        /// Draws a line whose glyphs straddle `revealLimit`: glyphs before the fade
+        /// zone are drawn in batches, glyphs inside it one by one at partial alpha.
+        private func drawFading(line: CTLine, limit: CGFloat, in context: CGContext) {
+            let fade = max(revealFade, 0.001)
+            let runs = CTLineGetGlyphRuns(line) as NSArray
+            for runIndex in 0 ..< runs.count {
+                let run = runs[runIndex] as! CTRun
+                let count = CTRunGetGlyphCount(run)
+                guard count > 0 else { continue }
+                var indices = [CFIndex](repeating: 0, count: count)
+                CTRunGetStringIndices(run, CFRange(location: 0, length: 0), &indices)
+
+                var batchStart = -1
+                for glyph in 0 ... count {
+                    let alpha: CGFloat = glyph < count
+                        ? min(1, max(0, (limit - CGFloat(indices[glyph])) / fade))
+                        : -1
+                    if alpha == 1 {
+                        if batchStart < 0 { batchStart = glyph }
+                        continue
+                    }
+                    if batchStart >= 0 {
+                        CTRunDraw(run, context, CFRange(location: batchStart, length: glyph - batchStart))
+                        batchStart = -1
+                    }
+                    if alpha > 0 {
+                        context.saveGState()
+                        context.setAlpha(alpha)
+                        CTRunDraw(run, context, CFRange(location: glyph, length: 1))
+                        context.restoreGState()
+                    }
+                }
+            }
+        }
+
+        /// The region, in CoreText layout space (lower-left origin), that changes when
+        /// the reveal position moves between `from` and `to`. `nil` if nothing changes.
+        open func revealDirtyRect(from: CGFloat?, to: CGFloat?) -> CGRect? {
+            guard let lines, let lineOrigins, let lineMetrics else { return nil }
+            let low = min(from ?? .infinity, to ?? .infinity)
+            let high = max(from ?? .infinity, to ?? .infinity)
+            let lower = low - revealFade
+            var result: CGRect?
+            for index in 0 ..< lines.count {
+                let range = CTLineGetStringRange(lines[index])
+                let start = CGFloat(range.location)
+                let end = start + CGFloat(range.length)
+                guard end > lower, start < high else { continue }
+                let rect = lineBoundingRect(origin: lineOrigins[index], metrics: lineMetrics[index])
+                    .insetBy(dx: -2, dy: -4)
+                result = result.map { $0.union(rect) } ?? rect
+            }
+            return result
+        }
+
+        /// Height needed by the lines that have started to reveal at `limit`, measured
+        /// at `width`. Lines starting at or after `limit` take no space, so a block
+        /// grows one line at a time. `nil` when nothing is hidden.
+        open func revealedHeight(forWidth width: CGFloat, limit: CGFloat?) -> CGFloat? {
+            guard let limit, width > 0 else { return nil }
+            if revealBottoms?.width != width {
+                let fill = makeFrameFill(
+                    constraint: CGSize(width: width, height: Self.maxLayoutDimension),
+                    clampsToMaxLayoutDimension: true
+                )
+                let entries: [(start: Int, bottom: CGFloat)] = fill.lines.indices.map { index in
+                    let start = CTLineGetStringRange(fill.lines[index]).location
+                    let bottom = fill.pathSize.height
+                        - (fill.lineOrigins[index].y - fill.lineMetrics[index].descent)
+                    return (start, bottom)
+                }
+                revealBottoms = (width, entries)
+            }
+            var height: CGFloat = 0
+            for entry in revealBottoms?.entries ?? [] where CGFloat(entry.start) < limit {
+                height = max(height, entry.bottom)
+            }
+            return ceil(height)
         }
 
         /// The number of laid-out lines intersecting `rect`; `nil` counts every line.
@@ -289,6 +389,7 @@ extension TextLabel {
             for index in lineIndices {
                 let line = lines[index]
                 let lineOrigin = lineOrigins[index]
+                if let limit = revealLimit, CGFloat(CTLineGetStringRange(line).location) >= limit { continue }
                 let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
                 for runIndex in 0 ..< glyphRuns.count {
                     let glyphRun = glyphRuns[runIndex] as! CTRun
